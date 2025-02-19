@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router"
+import { useNavigate, Link } from "react-router"
 import { useState } from "react"
 import Mountains from "../../assets/Glorious-blue-mountain-range.jpg"
 
@@ -9,7 +9,7 @@ export default function LoginPage() {
 
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault()
     setError("")
 
@@ -22,13 +22,35 @@ export default function LoginPage() {
       setError("Please enter a valid email address")
       return
     }
+    try {
+      const response = await fetch('http://localhost:5260/api/MongoDB/login', {  // Cambié la URL a 'localhost:5260' por lo que me mencionaste
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password,
+        }),
+      });
 
-    // Here you would typically handle the login process
-    console.log("Login attempt with:", { email, password })
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Token:', data.token);  // Asegúrate de usar 'data.token', no 'data.Token'
+        // Guardar el token en localStorage o en un estado global si es necesario
+        localStorage.setItem('authToken', data.token);
 
-    // For demo purposes, we'll just log the attempt
-    alert("Login attempt successful! (This is a demo)")
-    navigate("/dashboard")
+        // Redirigir al usuario a la página de inicio o a un endpoint protegido
+        navigate("/dashboard");
+      } else {
+        const error = await response.text();
+        setError(error);  // Mostrar el error en la interfaz
+      }
+    } catch (error) {
+      console.error('Error en la solicitud:', error);
+      setError("An error occurred while trying to log in");
+    }
+  
   }
 
   const isValidEmail = (email) => {
@@ -82,7 +104,9 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-
+            <div>
+              <Link to={"/register"} className="text-blue-500 font-light underline">Sign Up</Link>
+            </div>
             <div>
               <button
                 type="submit"
