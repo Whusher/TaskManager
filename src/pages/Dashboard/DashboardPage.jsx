@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ReactModal from 'react-modal';
+import { useNavigate } from 'react-router';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { CloseSVG, PlusSVG } from '../../helpers/SVGExporter';
 import TaskCards from '../../layouts/CardsTasks';
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [modalIsOpen, setModalIsOpen] = useState(false); // Estado para controlar la visibilidad del modal
   const [taskData, setTaskData] = useState({
     nameTask: '',
@@ -93,7 +95,13 @@ function Dashboard() {
         )
         const data = await res.json();
         console.log(data);
-        setMyTasks(data)
+        if(data.error){
+          localStorage.clear();
+          navigate('/')
+        }
+        else{
+          setMyTasks(data)
+        }
       }catch(e){
         console.log(e)
       }
@@ -106,7 +114,7 @@ function Dashboard() {
       {/* Botón flotante para abrir el modal */}
       <button
         onClick={openModal}
-        className="fixed bottom-8 right-8 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all"
+        className="fixed bottom-8 right-8 cursor-pointer p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-all"
       >
         { 
           modalIsOpen ?

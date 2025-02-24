@@ -39,7 +39,8 @@ export default function LoginPage() {
         console.log('Token:', data.token);  // Asegúrate de usar 'data.token', no 'data.Token'
         // Guardar el token en localStorage o en un estado global si es necesario
         localStorage.setItem('authToken', data.token);
-
+        //Save the email of the user
+        localStorage.setItem("email", email);
         // Redirigir al usuario a la página de inicio o a un endpoint protegido
         navigate("/dashboard");
       } else {
