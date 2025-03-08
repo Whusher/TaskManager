@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";  // Asegúrate de importar 'react-router-dom'
 import { useState } from "react";
+import { registerUser } from "../../services/authService";
 import Mountains from "../../assets/Glorious-blue-mountain-range.jpg";
+import { toast } from "react-toastify";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -26,22 +28,13 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5260/api/MongoDB/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, username, password }),
-      });
-      
-      const data = await response.text();
-
-      if (!response.ok) {
-        throw new Error(data || "Registration failed");
+      const res = registerUser(email,username,password);
+      if(res){
+        toast.success("Registration successful! You can now log in.");
+        navigate("/login");
+      }else{
+        toast.error("Try again!")
       }
-
-      alert("Registration successful! You can now log in.");
-      navigate("/login");
     } catch (err) {
       setError(err.message);
     } finally {

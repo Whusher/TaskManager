@@ -1,7 +1,11 @@
+import { useEffect } from "react";
 import { CheckCircle, Clock, Users, Zap } from "react-feather"
 import { useNavigate } from "react-router"
 
 export default function LandingPage() {
+  useEffect(()=>{
+    localStorage.clear()
+  },[])
     const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-sky-50">

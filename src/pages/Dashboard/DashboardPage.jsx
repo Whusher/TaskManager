@@ -4,16 +4,18 @@ import { useNavigate } from 'react-router';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { CloseSVG, PlusSVG } from '../../helpers/SVGExporter';
 import TaskCards from '../../layouts/CardsTasks';
+import { toast } from 'react-toastify';
+import { getMyTasks, createTask } from '../../services/taskServices';
 
 function Dashboard() {
   const navigate = useNavigate();
   const [modalIsOpen, setModalIsOpen] = useState(false); // Estado para controlar la visibilidad del modal
   const [taskData, setTaskData] = useState({
-    nameTask: '',
-    descriptionTask: '',
+    titulo: '',
+    descripcion: '',
     deadline: '',
-    status: 'In Progress',
-    category: '',
+    status: 'In progress',
+    categoria: '',
   });
   const [error, setError] = useState('');
   const [mytasks, setMyTasks] = useState([]);
@@ -22,11 +24,11 @@ function Dashboard() {
   const closeModal = () => {
     setModalIsOpen(false);
     setTaskData({
-      nameTask: '',
-      descriptionTask: '',
+      titulo: '',
+      descripcion: '',
       deadline: '',
-      status: 'In Progress',
-      category: '',
+      status: 'In progress',
+      categoria: '',
     });
     setError('');
   };
@@ -47,34 +49,19 @@ function Dashboard() {
     e.preventDefault();
 
     // Validación básica
-    if (!taskData.nameTask || !taskData.descriptionTask || !taskData.deadline || !taskData.category) {
+    if (!taskData.titulo || !taskData.descripcion || !taskData.deadline || !taskData.categoria) {
       setError('Please fill all fields.');
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:5260/api/MongoDB/createTask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`, // Suponiendo que el token JWT se guarda en localStorage
-        },
-        body: JSON.stringify({
-          NameTask: taskData.nameTask,
-          DescriptionTask: taskData.descriptionTask,
-          DeadLine: new Date(taskData.deadline),
-          Status: taskData.status,
-          Category: taskData.category,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorMessage = await response.text();
+      const response = await createTask(taskData);
+      if (!response) {
+        const errorMessage = "Try again later...";
         setError(errorMessage);
         return;
       }
-
-      alert('Task created successfully!');
+      toast.success('Task created successfully!');
       closeModal(); // Cerrar el modal después de crear la tarea
     } catch (error) {
       setError('Something went wrong. Please try again later.');
@@ -84,18 +71,8 @@ function Dashboard() {
   useEffect(()=>{
     const fetchTasks = async() =>{
       try{
-        const res = await fetch(`http://localhost:5260/api/MongoDB/getTasks`,
-          {
-            method: 'GET',
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization" : `Bearer ${localStorage.getItem('authToken')}`
-            }
-          }
-        )
-        const data = await res.json();
-        console.log(data);
-        if(data.error){
+        const data = await getMyTasks();
+        if(!data){
           localStorage.clear();
           navigate('/')
         }
@@ -130,11 +107,6 @@ function Dashboard() {
       {/* Modal de creación de tarea */}
       <div
         className={`${modalIsOpen? "block" :"hidden"}`}
-        // isOpen={modalIsOpen}
-        // onRequestClose={closeModal}
-        // contentLabel="Create Task"
-        // className="modal-content"
-        // overlayClassName="modal-overlay"
       >
         <div className="p-4">
           <h2 className="text-xl font-semibold mb-4">Create Task</h2>
@@ -144,8 +116,8 @@ function Dashboard() {
               <label className="block text-sm">Name of Task</label>
               <input
                 type="text"
-                name="nameTask"
-                value={taskData.nameTask}
+                name="titulo"
+                value={taskData.titulo}
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded-md"
                 required
@@ -155,8 +127,8 @@ function Dashboard() {
             <div>
               <label className="block text-sm">Description</label>
               <textarea
-                name="descriptionTask"
-                value={taskData.descriptionTask}
+                name="descripcion"
+                value={taskData.descripcion}
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded-md"
                 required
@@ -183,7 +155,7 @@ function Dashboard() {
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded-md"
               >
-                <option value="In Progress">In Progress</option>
+                <option value="In progress">In progress</option>
                 <option value="Done">Done</option>
                 <option value="Paused">Paused</option>
                 <option value="Revision">Revision</option>
@@ -194,8 +166,8 @@ function Dashboard() {
               <label className="block text-sm">Category</label>
               <input
                 type="text"
-                name="category"
-                value={taskData.category}
+                name="categoria"
+                value={taskData.categoria}
                 onChange={handleChange}
                 className="w-full p-2 border border-gray-300 rounded-md"
                 required

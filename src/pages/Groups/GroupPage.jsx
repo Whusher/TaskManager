@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DasboardLayout from "../../layouts/DashboardLayout";
+import { toast } from "react-toastify";
+import { addNewMember, createGroup, getGroupsByOwner } from "../../services/groupService";
 
 export default function GroupPageM() {
   return <DasboardLayout child={<OwnerGroups />} />;
@@ -15,122 +17,81 @@ const OwnerGroups = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [creating, setCreating] = useState(false);
-
-  const emailUser = localStorage.getItem("email");
+  const [updater, setUpdater] = useState(false);
+  const Username = localStorage.getItem("username");
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
-      alert("El nombre del grupo no puede estar vacío.");
+      toast.warn("El nombre del grupo no puede estar vacío.");
       return;
     }
 
     setCreating(true);
 
-    const newGroup = {
-      ownerGroup: emailUser,
-      nameGroup: newGroupName,
-      groupStatus: true,
-    };
-
     try {
-      const response = await fetch("http://localhost:5260/api/Groups/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newGroup),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al crear el grupo.");
+      const res = await createGroup({
+        owner: Username,
+        nombre: newGroupName
+      })
+      if (res){
+        toast.success("Grupo creado")
+      }else{
+        toast.error("Error al crear el grupo")
       }
 
-      const createdGroup = await response.json();
-      setGroups([...groups, createdGroup]); // Agrega el nuevo grupo a la lista
+      //UPdate groups
+      setUpdater(prev => !prev)
       setNewGroupName("");
       setIsModalOpen(false);
     } catch (error) {
       console.error(error);
-      alert("Hubo un error al crear el grupo.");
+      toast.error("Hubo un error al crear el grupo.");
     } finally {
       setCreating(false);
     }
   };
 
   useEffect(() => {
-    fetch(`http://localhost:5260/api/Groups/GetGroupsByOwner/${encodeURIComponent(emailUser)}`)
-      .then((response) => {
-        if (!response.ok) throw new Error("Error al obtener los grupos");
-        return response.json();
-      })
-      .then((data) => {
-        setGroups(data);
+    const fetchGroups = async() =>{
+      const res = await getGroupsByOwner(Username);
+      if(res){
+        setGroups(res);
         setLoading(false);
-      })
-      .catch((error) => {
-        setError(error.message);
+      }else{
+        setError("Sin grupos disponibles");
         setLoading(false);
-      });
-  }, []);
+      }
+    }
+    fetchGroups();
+    fetchGroups();
+  }, [updater]);
 
   const toggleGroupDetails = (group) => {
-    setSelectedGroup(selectedGroup?.identifier === group.identifier ? null : group);
+    setSelectedGroup(selectedGroup?._id === group._id ? null : group);
   };
 
   const handleAddMember = async (groupId) => {
     if (!newMemberEmail.trim()) {
-      alert("Ingrese un email válido.");
+      toast.error("Ingrese un username válido.");
       return;
     }
 
     try {
-      const response = await fetch(`http://localhost:5260/api/Groups/AddIntegrantToGroup/${groupId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newMemberEmail),
-      });
+      const response = await addNewMember(groupId,newMemberEmail) 
+      if (!response) throw new Error("Error al agregar integrante.");
 
-      if (!response.ok) throw new Error("Error al agregar integrante.");
-
-      alert("Integrante agregado correctamente.");
+      toast.success("Integrante agregado correctamente.");
       setNewMemberEmail("");
 
       // Refrescar la lista de grupos
-      const updatedGroups = groups.map((group) =>
-        group.identifier === groupId
-          ? { ...group, integrants: [...group.integrants, { email: newMemberEmail }] }
-          : group
-      );
-      setGroups(updatedGroups);
+      setUpdater(prev => !prev)
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message);
     }
   };
 
-  const handleDeleteGroup = async (groupId) => {
-    if (!window.confirm("¿Estás seguro de que deseas eliminar este grupo?")) return;
-
-    try {
-      const response = await fetch(`http://localhost:5260/api/Groups/DeleteGroup/${groupId}`, {
-        method: "POST", headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(emailUser)
-      });
-
-      if (!response.ok) throw new Error("Error al eliminar el grupo.");
-
-      alert("Grupo eliminado correctamente.");
-      setGroups(groups.filter((group) => group.identifier !== groupId));
-      setSelectedGroup(null);
-    } catch (error) {
-      alert(error.message);
-    }
-  };
 
   if (loading) return <p className="text-center text-gray-500">Cargando...</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
-  if (groups.length === 0) return <p className="text-center text-gray-500">No eres dueño de ningún grupo.</p>;
-
+  
   return (
     <div className="max-w-4xl mx-auto mt-8 p-4">
       <h2 className="text-2xl font-bold text-center mb-4">Mis Grupos</h2>
@@ -144,33 +105,36 @@ const OwnerGroups = () => {
         </button>
       </div>
 
+      {groups.length === 0 && <p className="text-center text-gray-500">No eres dueño de ningún grupo.</p>}
 
+      {error && <p className="text-center text-red-500">{error}</p>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {groups.map((group) => (
           <div
-            key={group.identifier}
-            onClick={() => toggleGroupDetails(group)}
+            key={group._id}
+            // onClick={() => toggleGroupDetails(group)}
+            onMouseEnter={() => toggleGroupDetails(group)}
+            onMouseLeave={() => toggleGroupDetails(group)}
             className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-100 transition-all"
           >
-            <h3 className="text-lg font-semibold">{group.nameGroup}</h3>
-            <p className="text-gray-600">Owner: {group.ownerGroup}</p>
-            <p className="text-gray-500">Creado el: {new Date(group.creationGroupDate).toLocaleDateString()}</p>
+            <h3 className="text-lg font-semibold">{group.nombre}</h3>
+            <p className="text-gray-600">Owner: {group.owner}</p>
             <p
-              className={`mt-2 px-2 py-1 inline-block text-sm rounded ${group.groupStatus ? "bg-green-200 text-green-700" : "bg-red-200 text-red-700"
+              className={`mt-2 px-2 py-1 inline-block text-sm rounded ${group.isActive ? "bg-green-200 text-green-700" : "bg-red-200 text-red-700"
                 }`}
             >
-              {group.groupStatus ? "Activo" : "Inactivo"}
+              {group.isActive ? "Activo" : "Inactivo"}
             </p>
 
             {/* Mostrar detalles del grupo si está seleccionado */}
-            {selectedGroup?.identifier === group.identifier && (
+            {selectedGroup?._id === group._id && (
               <div className="mt-4 p-2 border-t">
                 <h4 className="font-semibold mb-2">Integrantes:</h4>
-                {group.integrants && group.integrants.length > 0 ? (
+                {group.integrantes && group.integrantes.length > 0 ? (
                   <ul className="text-sm text-gray-700">
-                    {group.integrants.map((member, index) => (
+                    {group.integrantes.map((member, index) => (
                       <li key={index} className="py-1">
-                        {member.email}
+                        {member}
                       </li>
                     ))}
                   </ul>
@@ -182,13 +146,13 @@ const OwnerGroups = () => {
                 <div className="mt-4 flex">
                   <input
                     type="email"
-                    placeholder="Email del nuevo integrante"
+                    placeholder="Username del nuevo usuario"
                     value={newMemberEmail}
                     onChange={(e) => setNewMemberEmail(e.target.value)}
                     className="flex-grow p-2 border rounded-md"
                   />
                   <button
-                    onClick={() => handleAddMember(group.identifier)}
+                    onClick={() => handleAddMember(group._id)}
                     className="ml-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
                   >
                     Agregar
@@ -199,7 +163,7 @@ const OwnerGroups = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDeleteGroup(group.identifier);
+                    handleDeleteGroup(group._id);
                   }}
                   className="mt-4 bg-red-600 text-white w-full px-4 py-2 rounded-md hover:bg-red-700"
                 >

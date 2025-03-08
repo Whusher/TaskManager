@@ -1,13 +1,19 @@
-import { useNavigate, Link } from "react-router"
-import { useState } from "react"
 import Mountains from "../../assets/Glorious-blue-mountain-range.jpg"
+import { useNavigate, Link } from "react-router"
+import { useState,useEffect } from "react"
+import { loginUser } from "../../services/authService"
+import { useAuth } from "./../../context/AuthContext";
+import { toast } from "react-toastify";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
-
+  const { login } = useAuth();
   const navigate = useNavigate();
+  useEffect(()=>{
+      localStorage.clear()
+    },[])
 
   const handleSubmit = async(e) => {
     e.preventDefault()
@@ -23,28 +29,19 @@ export default function LoginPage() {
       return
     }
     try {
-      const response = await fetch('http://localhost:5260/api/MongoDB/login', {  // Cambié la URL a 'localhost:5260' por lo que me mencionaste
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Token:', data.token);  // Asegúrate de usar 'data.token', no 'data.Token'
-        // Guardar el token en localStorage o en un estado global si es necesario
-        localStorage.setItem('authToken', data.token);
-        //Save the email of the user
-        localStorage.setItem("email", email);
-        // Redirigir al usuario a la página de inicio o a un endpoint protegido
-        navigate("/dashboard");
-      } else {
-        const error = await response.text();
+      const data = await loginUser(email, password);
+      if(data){
+        await login(data,data.token)
+        
+        if(localStorage.getItem("admin")){
+          toast.success("Welcome again Admin")
+          navigate("/users");
+        }else{
+          // Redirigir al usuario a la página de inicio o a un endpoint protegido
+          navigate("/dashboard");
+        }
+      }else {
+        const error = "Not allowed login";
         setError(error);  // Mostrar el error en la interfaz
       }
     } catch (error) {
