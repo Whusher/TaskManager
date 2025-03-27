@@ -74,6 +74,20 @@ export const getGroupsByUser = async(integrant) =>{
         return false;
     }
 }
+export const deleteGroup = async (groupId) => {
+    try {
+      const res = await api.delete(`/groups/groups/${groupId}`);
+      if (res.status === 200) {
+        return res.data;  // Si la eliminación fue exitosa, devolver el mensaje de éxito
+      } else {
+        return false;  // Si no fue exitosa, devolver false
+      }
+    } catch (e) {
+      console.error(e);
+      return false;  // Si ocurre un error, devolver false
+    }
+  };
+  
 
 export const getTasksByGroup = async(groupId) =>{
     try{

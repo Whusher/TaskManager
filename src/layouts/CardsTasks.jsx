@@ -113,8 +113,10 @@ function GetTasksByType(tasks, type, showOwner, updater) {
               key={task._id}
               className="bg-white shadow-lg cursor-pointer hover:scale-105 text-black transition-all ease-in delay-75 hover:shadow-sky-600 shadow-sky-700/35 rounded-2xl p-6 border border-gray-200 mt-5"
               // onMouseEnter={() => setHoveredTask(task.id)}
-              onClick={() => setHoveredTask(task._id)}
-              onMouseLeave={() => setHoveredTask(null)}
+              onClick={() => {
+                  hoveredTask == task._id ? setHoveredTask(null) :setHoveredTask(task._id)
+              }}
+              //onMouseLeave={() => setHoveredTask(null)}
             >
               <h3 className="text-xl font-semibold mb-2">{task.titulo}</h3>
               {

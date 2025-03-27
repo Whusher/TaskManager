@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import DasboardLayout from "../../layouts/DashboardLayout";
 import { toast } from "react-toastify";
-import { addNewMember, createGroup, getGroupsByOwner } from "../../services/groupService";
+import { addNewMember, createGroup, getGroupsByOwner, deleteGroup } from "../../services/groupService";
 
 export default function GroupPageM() {
   return <DasboardLayout child={<OwnerGroups />} />;
@@ -19,6 +19,7 @@ const OwnerGroups = () => {
   const [creating, setCreating] = useState(false);
   const [updater, setUpdater] = useState(false);
   const Username = localStorage.getItem("username");
+
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
       toast.warn("El nombre del grupo no puede estar vacío.");
@@ -38,7 +39,7 @@ const OwnerGroups = () => {
         toast.error("Error al crear el grupo")
       }
 
-      //UPdate groups
+      // Actualizar lista de grupos
       setUpdater(prev => !prev)
       setNewGroupName("");
       setIsModalOpen(false);
@@ -62,11 +63,10 @@ const OwnerGroups = () => {
       }
     }
     fetchGroups();
-    fetchGroups();
   }, [updater]);
 
   const toggleGroupDetails = (group) => {
-    setSelectedGroup(selectedGroup?._id === group._id ? null : group);
+    setSelectedGroup( group );
   };
 
   const handleAddMember = async (groupId) => {
@@ -76,7 +76,7 @@ const OwnerGroups = () => {
     }
 
     try {
-      const response = await addNewMember(groupId,newMemberEmail) 
+      const response = await addNewMember(groupId, newMemberEmail);
       if (!response) throw new Error("Error al agregar integrante.");
 
       toast.success("Integrante agregado correctamente.");
@@ -89,9 +89,25 @@ const OwnerGroups = () => {
     }
   };
 
+  const handleDeleteGroup = async( id) => {
+    console.log("hello", id)
+    try{
+      const res = await deleteGroup(id);
+      if(res){
+        setUpdater(prev => !prev)
+        toast.success(`${res.message}`)
+      }else{
+      toast.error('Error al tratar de eliminar el grupo');
+      }
+
+    }catch(e){
+      console.log(e)
+      toast.error('Error al tratar de eliminar el grupo');
+    }
+  }
 
   if (loading) return <p className="text-center text-gray-500">Cargando...</p>;
-  
+
   return (
     <div className="max-w-4xl mx-auto mt-8 p-4">
       <h2 className="text-2xl font-bold text-center mb-4">Mis Grupos</h2>
@@ -112,9 +128,7 @@ const OwnerGroups = () => {
         {groups.map((group) => (
           <div
             key={group._id}
-            // onClick={() => toggleGroupDetails(group)}
-            onMouseEnter={() => toggleGroupDetails(group)}
-            onMouseLeave={() => toggleGroupDetails(group)}
+            onClick={() => toggleGroupDetails(group)} // Usar onClick en lugar de onMouseEnter/Leave
             className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:bg-gray-100 transition-all"
           >
             <h3 className="text-lg font-semibold">{group.nombre}</h3>
@@ -203,8 +217,8 @@ const OwnerGroups = () => {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
 };
+

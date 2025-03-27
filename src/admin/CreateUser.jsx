@@ -1,23 +1,16 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { getUserById, updateUser } from "../services/adminService";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { createUser } from "../services/adminService";
 import { toast } from "react-toastify";
 
-export default function EditUser() {
-    const { id } = useParams();
+export default function CreateUser() {
     const navigate = useNavigate();
     const [user, setUser] = useState({
         username: "",
         email: "",
-        role: "user",
-        password: "" // Se añade el campo de contraseña
+        password: "",
+        role: "user"
     });
-
-    useEffect(() => {
-        getUserById(id)
-            .then((res) => setUser({ ...res, password: "" })) // Evita mostrar la contraseña existente
-            .catch(console.error);
-    }, [id]);
 
     const handleChange = (e) => {
         setUser({ ...user, [e.target.name]: e.target.value });
@@ -26,23 +19,18 @@ export default function EditUser() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const updatedData = { ...user };
-            if (!updatedData.password) {
-                delete updatedData.password; // Si el campo está vacío, no se envía
-            }
-
-            await updateUser(id, updatedData);
-            toast.success("Usuario editado correctamente");
+            await createUser(user);
+            toast.success("Usuario creado correctamente");
             navigate("/users");
         } catch (error) {
-            toast.error("Error al actualizar el usuario");
-            console.error("Error actualizando usuario", error);
+            console.error("Error creando usuario", error);
+            toast.error("No se pudo crear el usuario");
         }
     };
 
     return (
         <div className="container mx-auto p-6">
-            <h2 className="text-2xl font-bold mb-4">Editar Usuario</h2>
+            <h2 className="text-2xl font-bold mb-4">Crear Usuario</h2>
             <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
                 <div className="mb-4">
                     <label className="block text-gray-700 text-sm font-bold mb-2">Username</label>
@@ -52,6 +40,7 @@ export default function EditUser() {
                         value={user.username}
                         onChange={handleChange}
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
+                        required
                     />
                 </div>
                 <div className="mb-4">
@@ -62,17 +51,18 @@ export default function EditUser() {
                         value={user.email}
                         onChange={handleChange}
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
+                        required
                     />
                 </div>
                 <div className="mb-4">
-                    <label className="block text-gray-700 text-sm font-bold mb-2">Contraseña (opcional)</label>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">Contraseña</label>
                     <input
                         type="password"
                         name="password"
                         value={user.password}
                         onChange={handleChange}
                         className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight"
-                        placeholder="Nueva contraseña (dejar en blanco para no cambiar)"
+                        required
                     />
                 </div>
                 <div className="mb-4">
@@ -92,7 +82,7 @@ export default function EditUser() {
                         type="submit"
                         className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                     >
-                        Guardar Cambios
+                        Crear Usuario
                     </button>
                     <button
                         type="button"

@@ -11,6 +11,11 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false); // Estado para alternar la visibilidad
+
+  const togglePassword = () => {
+    setShowPassword(!showPassword);
+  };
   useEffect(()=>{
       localStorage.clear()
     },[])
@@ -38,10 +43,11 @@ export default function LoginPage() {
           navigate("/users");
         }else{
           // Redirigir al usuario a la página de inicio o a un endpoint protegido
+          toast.success(`Welcome ${email}`)
           navigate("/dashboard");
         }
       }else {
-        const error = "Not allowed login";
+        const error = "Password/Email incorrect";
         setError(error);  // Mostrar el error en la interfaz
       }
     } catch (error) {
@@ -89,17 +95,24 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-sm font-medium text-light">
                 Password
               </label>
-              <div className="mt-1">
+              <div className="mt-1 relative">
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"} // Cambiar tipo según showPassword
                   autoComplete="current-password"
-                  // required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="appearance-none block w-full px-3 py-2 border border-primary rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-secondary text-light"
                 />
+                {/* Icono o botón para mostrar/ocultar contraseña */}
+                <button
+                  type="button"
+                  onClick={togglePassword}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm text-gray-500"
+                >
+                  {showPassword ? "Ocultar" : "Mostrar"}
+                </button>
               </div>
             </div>
             <div>

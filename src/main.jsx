@@ -1,9 +1,7 @@
-import { StrictMode } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { createRoot } from "react-dom/client";
 import LoginPage from "./pages/Login/LoginPage";
 import "./index.css";
-import App from "./App.jsx";
 import DashboardPage from "./pages/Dashboard/DashboardPage.jsx";
 import LandingPage from "./pages/Landing/LandingPage.jsx";
 import RegisterPage from "./pages/Register/RegisterPage.jsx";
@@ -17,6 +15,7 @@ import ProtectedRoute from "./routes/ProtectedRoute.jsx";
 /**Admin Pages */
 import UsersList from "./admin/UserList.jsx";
 import EditUser from "./admin/EditUser.jsx";
+import CreateUser from "./admin/CreateUser.jsx";
 
 createRoot(document.getElementById("root")).render(
   <AuthProvider>
@@ -34,6 +33,8 @@ createRoot(document.getElementById("root")).render(
         {/* Rutas protegidas admin */}
         <Route path="/users" element={<ProtectedRoute Component={UsersList} isAdmin={true} />} />
         <Route path="/edit/:id" element={<ProtectedRoute Component={EditUser} isAdmin={true} />} />
+        <Route path="/create" element={<ProtectedRoute Component={CreateUser} isAdmin={true} />} />
+
       </Routes>
       <ToastContainer />
     </BrowserRouter>

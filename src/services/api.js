@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // URLs de la API
-const BASE_API_URL_USER = "https://task-man-backend-3ojebz4eo-whushers-projects.vercel.app/api/";
+const BASE_API_URL_USER = "https://task-man-backend.vercel.app/api";
 // const BASE_API_URL_USER = "http://localhost:1234/api"; //LOCAL ENVIRONMENT
 
 // Obtener token de localStorage

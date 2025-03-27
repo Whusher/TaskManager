@@ -24,9 +24,18 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.clear();
+    sessionStorage.clear();
     setUser(null);
+  
+    // Limpiar los toasts antes de recargar
+    import("react-toastify").then(({ toast }) => {
+      toast.dismiss(); // Cierra todos los toasts activos
+    });
+  
+    // Redirigir y recargar la página
+    window.location.href = "/";
   };
-
+  
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}

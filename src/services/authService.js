@@ -14,7 +14,7 @@ export const loginUser = async(email, password) => {
             }
             return response.data;
         }else{
-            return false;
+            return response.data;
         }
     }catch(e){
         console.log("Eroor del intercepppp" ,e)
@@ -29,10 +29,10 @@ export const registerUser = async(email,username,password)=>{
         if(response.status == 201){
             return response.data;
         }else{
-            return false;
+            return response.data;
         }
     }catch(e){
         console.log("Eroor del intercepppp" ,e)
-        return false;
+        return e;
     }
 }

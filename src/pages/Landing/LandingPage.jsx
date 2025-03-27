@@ -21,7 +21,7 @@ export default function LandingPage() {
                 Login
               </a>
               <a
-                onClick={() => navigate("/login")}
+                onClick={() => navigate("/register")}
                 className="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 cursor-pointer rounded-md text-sm font-medium ml-3"
               >
                 Sign up
@@ -142,7 +142,7 @@ export default function LandingPage() {
             Join thousands of users who have transformed their task management process.
           </p>
           <a
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/register")}
             className="mt-8 cursor-pointer w-full inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-sky-600 bg-white hover:bg-sky-50 sm:w-auto"
           >
             Sign up for free

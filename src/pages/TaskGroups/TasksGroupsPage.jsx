@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import DasboardLayout from "../../layouts/DashboardLayout";
 import { toast } from "react-toastify";
 import { getGroupById, getGroupsByOwner, getTasksByGroup } from "../../services/groupService";
-import { createTask, createTaskAssignedGroup } from "../../services/taskServices";
+import { createTaskAssignedGroup } from "../../services/taskServices";
 
 export default function TaskGroupsPage() {
     return <DasboardLayout child={<TaskGroups />} />;
@@ -16,143 +16,149 @@ const TaskGroups = () => {
     const emailUser = localStorage.getItem("email");
     const Username = localStorage.getItem("username");
     const [selectedGroup, setSelectedGroup] = useState(null);
-    const [updater, setUpdater] = useState(false);
-    const [newTask, setNewTask] = useState({
-        titulo: "",
-        descripcion: "",
-        categoria: "",
-        status: "In progress",
-        deadline: "",
-        emailOwner: emailUser,
-    });
-    const setUpdaterF = ()=> setUpdater(prev=>!prev)
+
+    const fetchTasks = useCallback(async (groupId) => {
+        try {
+            const data = await getTasksByGroup(groupId);
+            setTasks((prev) => ({ ...prev, [groupId]: data }));
+        } catch (error) {
+            toast.error("Error al cargar tareas");
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchGoruj = async(Username) =>{
-            setLoading(true)
-            try{
-                 const res= await getGroupsByOwner(Username)
-                 setGroups(res);
-            }catch(e){
-
-                setError(error.message);
-            }finally{
+        const fetchGroups = async () => {
+            setLoading(true);
+            try {
+                const res = await getGroupsByOwner(Username);
+                setGroups(res);
+            } catch (e) {
+                setError(e.message);
+                toast.error("Error al cargar grupos");
+            } finally {
                 setLoading(false);
-
             }
-        }
-        if(selectedGroup){
-            setInterval(()=>{
-                fetchTasks(selectedGroup)
-            },4000)
-        }
-        fetchGoruj(Username)
-    }, [updater]);
+        };
 
-    const fetchTasks = (groupId) => {
-        getTasksByGroup(groupId)
-            .then((data) => {
-                console.log(data)
-                // data = data.filter(dt => dt.taskGroup == groupId)
-                setTasks((prev) => ({ ...prev, [groupId]: data }));
-            });
-    };
+        fetchGroups();
+    }, [Username]);
 
     const handleGroupClick = (group) => {
-        if (group == selectedGroup) {
-            setSelectedGroup(null)
-            return;
-        }
-
-        setSelectedGroup(group);
-        if (!tasks[group._id]) {
+        setSelectedGroup(group === selectedGroup ? null : group);
+        if (group && !tasks[group._id]) {
             fetchTasks(group._id);
         }
     };
 
-    if (loading) return <p>Cargando...</p>;
-    if (error) return <p>Error: {error}</p>;
+    const updateTasksForGroup = (groupId) => {
+        fetchTasks(groupId);
+    };
+
+    if (loading) return <p className="text-center text-xl mt-10">Cargando...</p>;
+    if (error) return <p className="text-center text-red-500 mt-10">Error: {error}</p>;
 
     return (
-        <div className="p-4">
-            <h2 className="text-2xl font-bold">Mis Grupos</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="container mx-auto px-4 py-6">
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">Mis Grupos</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {groups.map((group) => (
-                    <div key={group._id} className="bg-white p-4 rounded-lg shadow-md cursor-pointer" onClick={() => handleGroupClick(group)}>
-                        <h3 className="text-lg font-semibold">{group.nombre}</h3>
+                    <div 
+                        key={group._id} 
+                        className={`
+                            bg-white p-5 rounded-xl shadow-lg transition-all duration-300
+                            ${selectedGroup?._id === group._id 
+                                ? 'border-2 border-blue-500 scale-105' 
+                                : 'hover:shadow-xl hover:border-blue-200'}
+                            cursor-pointer
+                        `} 
+                        onClick={() => handleGroupClick(group)}
+                    >
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">{group.nombre}</h3>
                         <p className="text-gray-600">Owner: {group.owner}</p>
-                        <p className="text-gray-500">Creado el: {new Date(group.creationGroupDate).toLocaleDateString()}</p>
                     </div>
                 ))}
             </div>
+            
             {selectedGroup && (
-                <div className="mt-6">
-                    <h3 className="text-xl font-bold">Tareas de {selectedGroup.nombre}</h3>
-                    <div className="w-full">
-                        <KanbanBoard tasks={tasks[selectedGroup._id] || []} updateAlltasks={setUpdater} />
-                    </div>
-                    {console.log(selectedGroup._id)}
-                    <TaskForm groupId={selectedGroup._id} updateAlltasks={setUpdaterF} />
+                <div className="mt-8 bg-gray-50 p-6 rounded-xl">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-6">
+                        Tareas de {selectedGroup.nombre}
+                    </h3>
+                    <KanbanBoard 
+                        tasks={tasks[selectedGroup._id] || []} 
+                        groupId={selectedGroup._id}
+                        updateTasksForGroup={updateTasksForGroup}
+                    />
+                    <TaskForm 
+                        groupId={selectedGroup._id} 
+                        updateTasksForGroup={updateTasksForGroup} 
+                    />
                 </div>
             )}
         </div>
     );
 };
 
-const KanbanBoard = ({ tasks, updateTaskStatus, updateAlltasks }) => {
+const KanbanBoard = ({ tasks, groupId, updateTasksForGroup }) => {
     const columns = [
-        { name: "In progress", color: "bg-blue-200" },
-        { name: "Done", color: "bg-green-200" },
-        { name: "Revision", color: "bg-yellow-200" },
-        { name: "Paused", color: "bg-red-200" }
+        { name: "In progress", color: "bg-blue-100", textColor: "text-blue-800" },
+        { name: "Done", color: "bg-green-100", textColor: "text-green-800" },
+        { name: "Revision", color: "bg-yellow-100", textColor: "text-yellow-800" },
+        { name: "Paused", color: "bg-red-100", textColor: "text-red-800" }
     ];
 
     const [selectedTask, setSelectedTask] = useState(null);
 
-    const handleTaskClick = (task) => {
-        setSelectedTask(task);
-    };
-
     const handleStatusChange = async (newStatus) => {
         if (selectedTask) {
-            const { id, ...taskDataWithoutId } = selectedTask; // Excluimos el id
-            const res = await fetch(`http://localhost:5260/api/MongoDB/updateTaskGroup/${id}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-                },
-                body: JSON.stringify({ ...taskDataWithoutId, status: newStatus }) // Añades todos los demás datos y el nuevo status
-            });
+            try {
+                const { _id, ...taskData } = selectedTask;
+                console.log(_id)
+                const res = await fetch(`https://task-man-backend.vercel.app/api/tasks/tasks/${_id}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                    },
+                    body: JSON.stringify({ ...taskData, status: newStatus })
+                });
 
-            if (res.ok) {
-                // Actualizamos el estado de las tareas y mostramos una alerta de éxito
-                updateTaskStatus(id, newStatus);
-                alert("Estado de la tarea actualizado exitosamente.");
-                setSelectedTask(null);  // Cerramos el modal
-                updateAlltasks();  // Actualizamos las tareas en el grupo
-            } else {
-                toast.error("Error al actualizar el estado de la tarea.")
-                // Mostramos una alerta de error si la respuesta no es exitosa            
+                if (res.ok) {
+                    toast.success("Estado de la tarea actualizado");
+                    updateTasksForGroup(groupId);
+                    setSelectedTask(null);
+                } else {
+                    toast.error("Error al actualizar el estado de la tarea");
+                }
+            } catch (error) {
+                toast.error("Error en la solicitud",error);
             }
         }
     };
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
-            {columns.map(({ name, color }) => (
-                <div key={name} className={`p-4 rounded-md ${color}`}>
-                    <h4 className="text-md font-bold mb-2">{name}</h4>
-                    <div className="space-y-2">
+            {columns.map(({ name, color, textColor }) => (
+                <div 
+                    key={name} 
+                    className={`p-4 rounded-lg ${color} min-h-[300px]`}
+                >
+                    <h4 className={`text-lg font-bold mb-4 ${textColor}`}>{name}</h4>
+                    <div className="space-y-4">
                         {tasks.filter((task) => task.status === name).map((task) => (
                             <div
                                 key={task.id}
-                                className="p-3 bg-white shadow rounded-md cursor-pointer"
-                                onClick={() => handleTaskClick(task)}
+                                className="p-4 bg-white shadow-md rounded-lg cursor-pointer hover:shadow-xl transition-all"
+                                onClick={() => setSelectedTask(task)}
                             >
-                                <h5 className="font-semibold">{task.titulo}</h5>
-                                <p className="text-sm text-gray-600 truncate">{task.descripcion}</p>
-                                <p className="text-xs text-gray-500">📅 {new Date(task.deadline).toLocaleDateString()}</p>
+                                <h5 className="font-semibold text-gray-800 mb-1">{task.titulo}</h5>
+                                <p className="text-sm text-gray-600 line-clamp-2 mb-2">{task.descripcion}</p>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-500">📅 {new Date(task.deadline).toLocaleDateString()}</span>
+                                    <span className={`px-2 py-1 rounded-full text-xs ${textColor} ${color}`}>
+                                        {name}
+                                    </span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -160,23 +166,30 @@ const KanbanBoard = ({ tasks, updateTaskStatus, updateAlltasks }) => {
             ))}
 
             {selectedTask && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="bg-white p-6 rounded-md shadow-md w-96">
-                        <h3 className="text-lg font-bold mb-2">{selectedTask.titulo}</h3>
-                        <p className="text-sm mb-4">{selectedTask.descripcion}</p>
-                        <p className="text-xs text-gray-500">📅 {new Date(selectedTask.deadline).toLocaleDateString()}</p>
-                        <div className="flex space-x-2 mt-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white p-8 rounded-xl shadow-2xl w-[500px] max-w-full">
+                        <h3 className="text-2xl font-bold mb-4 text-gray-800">{selectedTask.titulo}</h3>
+                        <p className="text-gray-600 mb-4">{selectedTask.descripcion}</p>
+                        <div className="flex items-center justify-between mb-4">
+                            <span className="text-sm text-gray-500">📅 {new Date(selectedTask.deadline).toLocaleDateString()}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-6">
                             {columns.map(({ name }) => (
                                 <button
                                     key={name}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded-md text-sm"
+                                    className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                                     onClick={() => handleStatusChange(name)}
                                 >
                                     {name}
                                 </button>
                             ))}
                         </div>
-                        <button className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md" onClick={() => setSelectedTask(null)}>Cerrar</button>
+                        <button 
+                            className="mt-4 w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition-colors"
+                            onClick={() => setSelectedTask(null)}
+                        >
+                            Cerrar
+                        </button>
                     </div>
                 </div>
             )}
@@ -184,106 +197,109 @@ const KanbanBoard = ({ tasks, updateTaskStatus, updateAlltasks }) => {
     );
 };
 
-
-const TaskForm = ({ groupId, updateAlltasks }) => {
+const TaskForm = ({ groupId, updateTasksForGroup }) => {
     const [newTask, setNewTask] = useState({
         titulo: "",
         descripcion: "",
         deadline: "",
         emailOwner: "",
-        categoria: "" // Campo de categoría libre
+        categoria: ""
     });
 
-    const [groupMembers, setGroupMembers] = useState([]); // Estado para los miembros
+    const [groupMembers, setGroupMembers] = useState([]);
 
     useEffect(() => {
-        const fetchGroupId = async(groupIdh)=>{
-            console.log("Hello there",groupIdh)
-            try{
-                const data = await getGroupById(groupIdh);
-                setGroupMembers(data.integrantes || [])
-            }catch(e){
-                console.log(e)
+        const fetchGroupMembers = async () => {
+            try {
+                const data = await getGroupById(groupId);
+                setGroupMembers(data.integrantes || []);
+            } catch (error) {
+                toast.error("Error al cargar miembros del grupo");
             }
-        }
+        };
+
         if (groupId) {
-            fetchGroupId(groupId);
+            fetchGroupMembers();
         }
     }, [groupId]);
 
-    const handleTaskCreate = () => {
+    const handleTaskCreate = async () => {
         if (!newTask.titulo || !newTask.descripcion || !newTask.deadline || !newTask.emailOwner) {
             toast.warn("Todos los campos son obligatorios.");
             return;
         }
-        console.log({ ...newTask, groupId: groupId, status: "In progress" })
-        createTaskAssignedGroup({ ...newTask, groupId: groupId, status: "In progress" })
-            .then((res) => {
-                if(res){
-                    toast.success("Tarea creada exitosamente");
-                    updateAlltasks();
-                }else{
-                    toast.error("Error al crear la tarea")
-                }
-                setNewTask({ titulo: "", descripcion: "", deadline: "", emailOwner: "", categoria: "" }); // Reiniciar formulario
-            })
-            .catch((error) => console.error("Error:", error));
+
+        try {
+            const taskData = { 
+                ...newTask, 
+                groupId: groupId, 
+                status: "In progress" 
+            };
+            const res = await createTaskAssignedGroup(taskData);
+            
+            if (res) {
+                toast.success("Tarea creada exitosamente");
+                updateTasksForGroup(groupId);
+                setNewTask({ titulo: "", descripcion: "", deadline: "", emailOwner: "", categoria: "" });
+            } else {
+                toast.error("Error al crear la tarea");
+            }
+        } catch (error) {
+            toast.error("Error en la solicitud");
+        }
     };
 
     return (
-        <div className="mt-6">
-            <h3 className="text-lg font-bold">Crear Nueva Tarea</h3>
-            <input
-                className="border p-2 w-full"
-                type="text"
-                placeholder="Nombre"
-                value={newTask.titulo}
-                onChange={(e) => setNewTask({ ...newTask, titulo: e.target.value })}
-            />
-            <textarea
-                className="border p-2 w-full mt-2"
-                placeholder="Descripción"
-                value={newTask.descripcion}
-                onChange={(e) => setNewTask({ ...newTask, descripcion: e.target.value })}
-            ></textarea>
-            <input
-                className="border p-2 w-full mt-2"
-                type="date"
-                value={newTask.deadline}
-                onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
-            />
-
-            {/* Selección de asignado */}
-            <select
-                className="border p-2 w-full mt-2"
-                value={newTask.emailOwner}
-                onChange={(e) => setNewTask({ ...newTask, emailOwner: e.target.value })}
-            >
-                <option value="">Seleccionar asignado</option>
-                {groupMembers.map((member,idx) => (
-                    <option key={idx} value={member}>
-                        {member}
-                    </option>
-                ))}
-            </select>
-
-            {/* Campo libre para categoría */}
-            <input
-                className="border p-2 w-full mt-2"
-                type="text"
-                placeholder="Categoría"
-                value={newTask.categoria}
-                onChange={(e) => setNewTask({ ...newTask, categoria: e.target.value })}
-            />
-
-            <button className="bg-blue-500 text-white px-4 py-2 mt-2 rounded" onClick={handleTaskCreate}>
-                Crear Tarea
-            </button>
+        <div className="mt-8 bg-white p-6 rounded-xl shadow-md">
+            <h3 className="text-xl font-bold mb-4 text-gray-800">Crear Nueva Tarea</h3>
+            <div className="space-y-4">
+                <input
+                    className="border-2 border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:border-blue-500"
+                    type="text"
+                    placeholder="Nombre de la tarea"
+                    value={newTask.titulo}
+                    onChange={(e) => setNewTask({ ...newTask, titulo: e.target.value })}
+                />
+                <textarea
+                    className="border-2 border-gray-300 p-3 w-full rounded-lg h-24 focus:outline-none focus:border-blue-500"
+                    placeholder="Descripción de la tarea"
+                    value={newTask.descripcion}
+                    onChange={(e) => setNewTask({ ...newTask, descripcion: e.target.value })}
+                ></textarea>
+                <div className="grid grid-cols-2 gap-4">
+                    <input
+                        className="border-2 border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:border-blue-500"
+                        type="date"
+                        value={newTask.deadline}
+                        onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                    />
+                    <select
+                        className="border-2 border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:border-blue-500"
+                        value={newTask.emailOwner}
+                        onChange={(e) => setNewTask({ ...newTask, emailOwner: e.target.value })}
+                    >
+                        <option value="">Seleccionar asignado</option>
+                        {groupMembers.map((member, idx) => (
+                            <option key={idx} value={member}>
+                                {member}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <input
+                    className="border-2 border-gray-300 p-3 w-full rounded-lg focus:outline-none focus:border-blue-500"
+                    type="text"
+                    placeholder="Categoría"
+                    value={newTask.categoria}
+                    onChange={(e) => setNewTask({ ...newTask, categoria: e.target.value })}
+                />
+                <button 
+                    className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors"
+                    onClick={handleTaskCreate}
+                >
+                    Crear Tarea
+                </button>
+            </div>
         </div>
     );
 };
-
-
-
-
-
